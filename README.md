@@ -1,5 +1,7 @@
 # LG webOS TV pointer
 
+**English** · [Italiano](README.it.md)
+
 Home Assistant custom integration that adds to the core `webostv` integration what it leaves out.
 It is the companion of [lg-tv-remote-card](https://github.com/mrgiov/lg-tv-remote-card), but the
 services can be used on their own.
