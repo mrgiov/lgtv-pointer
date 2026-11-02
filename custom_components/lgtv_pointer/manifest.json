@@ -1,0 +1,11 @@
+{
+  "domain": "lgtv_pointer",
+  "name": "LG webOS TV pointer",
+  "codeowners": ["@mrgiov"],
+  "dependencies": ["webostv"],
+  "documentation": "https://github.com/mrgiov/lgtv-pointer",
+  "issue_tracker": "https://github.com/mrgiov/lgtv-pointer/issues",
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "1.0.0"
+}

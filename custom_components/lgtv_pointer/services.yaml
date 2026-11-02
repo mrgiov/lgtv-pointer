@@ -1,0 +1,71 @@
+move:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: webostv
+          domain: media_player
+    dx:
+      required: true
+      selector:
+        number:
+          min: -500
+          max: 500
+    dy:
+      required: true
+      selector:
+        number:
+          min: -500
+          max: 500
+    down:
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 1
+click:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: webostv
+          domain: media_player
+scroll:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: webostv
+          domain: media_player
+    dx:
+      required: true
+      selector:
+        number:
+          min: -500
+          max: 500
+    dy:
+      required: true
+      selector:
+        number:
+          min: -500
+          max: 500
+watch_keyboard:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: webostv
+          domain: media_player
+app_icons:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: webostv
+          domain: media_player
