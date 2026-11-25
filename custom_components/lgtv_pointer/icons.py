@@ -4,11 +4,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-import os
 from pathlib import Path
 
 from aiowebostv import WebOsClient
-
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -21,27 +19,27 @@ MAX_PARALLEL_DOWNLOADS = 4
 
 
 async def download_app_icons(hass: HomeAssistant, client: WebOsClient) -> dict[str, str]:
-    """Download each app icon once and return {app title: local url}."""
+    """Download the app icons and return {app title: local url}."""
     response = await client.request(LIST_LAUNCH_POINTS)
     directory = Path(hass.config.path(ICONS_DIR))
     await hass.async_add_executor_job(lambda: directory.mkdir(parents=True, exist_ok=True))
     session = async_get_clientsession(hass, verify_ssl=False)  # the TV's certificate is self-signed
-
-    have = set(await hass.async_add_executor_job(os.listdir, directory))
-
     limit = asyncio.Semaphore(MAX_PARALLEL_DOWNLOADS)
 
-    async def fetch(source: str) -> str | None:
-        name = f"{hashlib.sha1(source.encode()).hexdigest()[:16]}.png"
-        if name not in have:
-            try:
-                async with limit, session.get(source, timeout=10) as reply:
-                    reply.raise_for_status()
-                    data = await reply.read()
-            except Exception as err:  # one broken icon must not stop the others
-                _LOGGER.debug("Icon %s not downloaded: %s", source, err)
-                return None
-            await hass.async_add_executor_job((directory / name).write_bytes, data)
+    async def fetch(title: str, source: str) -> str | None:
+        # Named after the title: the TV's icon urls change on every boot, so naming by url piled up files.
+        # shortcut: icons of uninstalled apps stay (a few KB each), and an app whose icon changes keeps
+        # its old picture in browsers while they cache /local; clean up if either ever matters.
+        name = f"{hashlib.sha1(title.encode()).hexdigest()[:16]}.png"
+        target = directory / name
+        try:
+            async with limit, session.get(source, timeout=10) as reply:
+                reply.raise_for_status()
+                data = await reply.read()
+        except Exception as err:  # one broken icon must not stop the others
+            _LOGGER.debug("Icon for %s not downloaded: %s", title, err)
+            return f"{ICONS_URL}/{name}" if await hass.async_add_executor_job(target.exists) else None
+        await hass.async_add_executor_job(target.write_bytes, data)
         return f"{ICONS_URL}/{name}"
 
     wanted: dict[str, str] = {}  # title -> source, first one wins
@@ -50,5 +48,5 @@ async def download_app_icons(hass: HomeAssistant, client: WebOsClient) -> dict[s
         source = launch_point.get("largeIcon") or launch_point.get("icon")
         if title and source and source.startswith("http"):
             wanted.setdefault(title, source)
-    urls = await asyncio.gather(*(fetch(source) for source in wanted.values()))
+    urls = await asyncio.gather(*(fetch(title, source) for title, source in wanted.items()))
     return {title: url for title, url in zip(wanted, urls) if url}

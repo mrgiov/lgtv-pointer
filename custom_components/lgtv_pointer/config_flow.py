@@ -9,7 +9,6 @@ except ImportError:  # pragma: no cover
     import voluptuous as vol
 
 from aiowebostv import WebOsTvPairError
-
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.helpers import config_validation as cv
 

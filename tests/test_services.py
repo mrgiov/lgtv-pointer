@@ -126,6 +126,30 @@ async def test_app_icons_returns_local_urls(hass, client, setup, tmp_path, aiocl
     assert result["icons"]["Netflix"].startswith("/local/lg-tv-remote/icons/")
 
 
+async def test_icon_files_do_not_pile_up_when_the_tv_changes_its_urls(hass, client, setup, tmp_path, aioclient_mock):
+    hass.config.config_dir = str(tmp_path)
+    aioclient_mock.get(re.compile(r"https://tv\.local/.*"), content=b"png")
+    for boot in ("aaa", "bbb", "ccc"):  # three TV boots, each with new urls for the same apps
+        client.request.return_value = {
+            "launchPoints": [
+                {"title": f"App {i}", "icon": f"https://tv.local/resources/{boot}/{i}.png"} for i in range(5)
+            ]
+        }
+        result = await call(hass, "app_icons")
+        assert len(result["icons"]) == 5
+    assert len(list((tmp_path / "www/lg-tv-remote/icons").iterdir())) == 5
+
+
+async def test_a_failed_download_keeps_the_icon_we_already_have(hass, client, setup, tmp_path, aioclient_mock):
+    hass.config.config_dir = str(tmp_path)
+    client.request.return_value = {"launchPoints": [{"title": "Netflix", "icon": "https://tv.local/n.png"}]}
+    aioclient_mock.get("https://tv.local/n.png", content=b"png")
+    first = await call(hass, "app_icons")
+    aioclient_mock.clear_requests()
+    aioclient_mock.get("https://tv.local/n.png", status=500)
+    assert await call(hass, "app_icons") == first
+
+
 async def test_app_icons_never_asks_the_tv_for_many_icons_at_once(hass, client, setup, tmp_path, aioclient_mock):
     hass.config.config_dir = str(tmp_path)
     client.request.return_value = {
