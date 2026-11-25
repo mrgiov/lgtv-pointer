@@ -18,17 +18,16 @@ Tutti i servizi richiedono l'`entity_id` di un media player `webostv`.
 
 ## Installazione
 
-1. HACS → ⋮ → Repository personalizzati → aggiungi questo repository, categoria **Integrazione**, poi installalo.
-2. Attivalo con una riga nella configurazione (per esempio in un file di `packages/`):
+1. HACS → cerca **LG webOS TV pointer** (oppure ⋮ → Repository personalizzati → questo repository, categoria **Integrazione**) e installalo.
+2. Riavvia Home Assistant.
+3. Accendi la TV. Impostazioni → Dispositivi e servizi → Aggiungi integrazione → **LG webOS TV pointer**, inserisci l'indirizzo IP della TV, premi Invia e accetta la richiesta di connessione sulla TV.
 
-   ```yaml
-   lgtv_pointer:
-   ```
+I servizi richiedono l'`entity_id` del media player `webostv` della TV; l'integrazione trova da sola la propria voce per quella TV.
 
-3. Riavvia Home Assistant.
+## Come si collega
 
-## Attenzione
+Si abbina da sola alla TV e tiene una connessione propria, separata da quella dell'integrazione `webostv` del core (la TV la elenca come seconda app abbinata). Si collega quando un servizio viene chiamato, quindi una TV spenta non è un problema: la chiamata fallisce con «TV not connected».
 
-Riusa il client WebSocket che `webostv` ha già aperto (`entry.runtime_data.client`), un dettaglio interno di
-quell'integrazione. Un aggiornamento di Home Assistant che lo cambia può rompere questo componente: se i servizi
-smettono di funzionare dopo un aggiornamento, apri una segnalazione (issue).
+## Passaggio dalla 1.x
+
+La 1.x si attivava con una riga `lgtv_pointer:` nella configurazione e prendeva in prestito la connessione di `webostv`. Togli quella riga (per esempio `packages/lgtv_pointer.yaml`), riavvia e aggiungi l'integrazione come sopra. I servizi e l'evento `lgtv_pointer_keyboard` non cambiano, quindi la card continua a funzionare.

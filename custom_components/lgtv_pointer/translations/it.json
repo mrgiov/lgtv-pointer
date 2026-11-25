@@ -1,0 +1,29 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "LG webOS TV pointer",
+        "description": "Inserisci l'indirizzo IP della TV. Accendila prima.",
+        "data": {
+          "host": "Host"
+        }
+      },
+      "pairing": {
+        "title": "Abbina la TV",
+        "description": "Premi Invia, poi accetta la richiesta di connessione sulla TV (usa il telecomando se compare un avviso)."
+      },
+      "reauth_confirm": {
+        "title": "Abbina di nuovo",
+        "description": "La TV non accetta più l'abbinamento. Accendila, premi Invia e accetta la richiesta sulla TV."
+      }
+    },
+    "error": {
+      "cannot_connect": "TV non raggiungibile. Accendila e controlla l'indirizzo.",
+      "error_pairing": "La richiesta di connessione non è stata accettata sulla TV."
+    },
+    "abort": {
+      "already_configured": "Questa TV è già configurata.",
+      "reauth_successful": "Abbinamento aggiornato."
+    }
+  }
+}
