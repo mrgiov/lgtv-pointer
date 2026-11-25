@@ -11,6 +11,8 @@ async def _pair(hass):
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     assert result["step_id"] == "user"
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_HOST: HOST})
+    if result["type"] == FlowResultType.ABORT:
+        return result
     assert result["step_id"] == "pairing"
     return await hass.config_entries.flow.async_configure(result["flow_id"], {})
 
@@ -40,3 +42,4 @@ async def test_same_tv_cannot_be_added_twice(hass, client, entry):
     result = await _pair(hass)
     assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+    client.connect.assert_not_awaited()  # the TV never showed a prompt for a TV we already have

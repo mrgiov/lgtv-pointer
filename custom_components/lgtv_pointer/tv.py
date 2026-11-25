@@ -8,7 +8,7 @@ from aiowebostv import WebOsClient, WebOsTvCommandError, WebOsTvPairError
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CONF_CLIENT_KEY, CONF_HOST, EVENT_KEYBOARD, IME_REGISTER_KEYBOARD
@@ -37,7 +37,7 @@ class Tv:
         try:
             await self.client.connect()
         except WebOsTvPairError as err:
-            raise ConfigEntryAuthFailed("The TV no longer accepts the pairing") from err
+            raise HomeAssistantError("The TV refused the pairing: remove and add the integration again") from err
         except CONNECT_ERRORS as err:
             raise HomeAssistantError("TV not connected") from err
         return self.client
@@ -50,6 +50,8 @@ class Tv:
         client = await self.connected()
         if self._keyboard_connection is client.connection:
             return
+        # Claim the connection before the first await below, so a second call cannot subscribe twice.
+        self._keyboard_connection = client.connection
 
         async def on_keyboard_state(payload: dict[str, Any] | None) -> None:
             _LOGGER.debug("IME payload for %s: %s", entity_id, payload)
@@ -67,8 +69,13 @@ class Tv:
 
         # client.subscribe() waits for a first reply, but the TV only answers once a text field has
         # focus. Register the handler and send the request ourselves, without waiting.
-        uid = client.command_count
-        client.command_count += 1
-        await client.create_subscription_handler(IME_REGISTER_KEYBOARD, uid, on_keyboard_state)
-        await client.command("subscribe", IME_REGISTER_KEYBOARD, {"subscribe": True}, uid)
-        self._keyboard_connection = client.connection
+        # shortcut: uses aiowebostv's command_count and create_subscription_handler, which are not
+        # documented; if a release changes them, switch to client.subscribe() in a background task.
+        try:
+            uid = client.command_count
+            client.command_count += 1
+            await client.create_subscription_handler(IME_REGISTER_KEYBOARD, uid, on_keyboard_state)
+            await client.command("subscribe", IME_REGISTER_KEYBOARD, {"subscribe": True}, uid)
+        except Exception:
+            self._keyboard_connection = None  # let the next call try again
+            raise

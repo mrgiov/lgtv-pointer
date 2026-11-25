@@ -10,11 +10,7 @@
       },
       "pairing": {
         "title": "Pair with the TV",
-        "description": "Select Submit, then accept the connection request on the TV (use the remote if a prompt appears)."
-      },
-      "reauth_confirm": {
-        "title": "Pair again",
-        "description": "The TV no longer accepts the pairing. Turn it on, select Submit and accept the prompt on the TV."
+        "description": "Select Submit, then accept the connection request on the TV within a few seconds (use the remote)."
       }
     },
     "error": {
@@ -22,8 +18,7 @@
       "error_pairing": "The connection request was not accepted on the TV."
     },
     "abort": {
-      "already_configured": "This TV is already set up.",
-      "reauth_successful": "Pairing updated."
+      "already_configured": "This TV is already set up."
     }
   }
 }

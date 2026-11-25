@@ -1,6 +1,8 @@
+import asyncio
+
 import pytest
 from aiowebostv import WebOsTvPairError
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -52,9 +54,9 @@ async def test_unreachable_tv_is_a_clear_error(hass, client, setup):
         await call(hass, "click")
 
 
-async def test_lost_pairing_starts_reauth(hass, client, setup):
-    client.connect.side_effect = WebOsTvPairError("revoked")
-    with pytest.raises(ConfigEntryAuthFailed):
+async def test_refused_pairing_is_a_clear_error(hass, client, setup):
+    client.connect.side_effect = WebOsTvPairError("refused")
+    with pytest.raises(HomeAssistantError, match="remove and add"):
         await call(hass, "click")
 
 
@@ -85,6 +87,23 @@ async def test_keyboard_watch_subscribes_once_per_connection_and_fires_events(ha
     assert [e.data for e in events] == [{"entity_id": ENTITY, "focus": True, "content_type": "url"}]
 
     client.connection = object()  # the TV reconnected: subscriptions are gone
+    await call(hass, "watch_keyboard")
+    assert client.command.await_count == 2
+
+
+async def test_two_simultaneous_watch_calls_subscribe_once(hass, client, setup):
+    async def slow_send(*args):
+        await asyncio.sleep(0.01)  # a real send yields to the event loop
+
+    client.command.side_effect = slow_send
+    await asyncio.gather(call(hass, "watch_keyboard"), call(hass, "watch_keyboard"))
+    client.create_subscription_handler.assert_awaited_once()
+
+
+async def test_failed_subscription_can_be_retried(hass, client, setup):
+    client.command.side_effect = [OSError("boom"), None]
+    with pytest.raises(OSError):
+        await call(hass, "watch_keyboard")
     await call(hass, "watch_keyboard")
     assert client.command.await_count == 2
 

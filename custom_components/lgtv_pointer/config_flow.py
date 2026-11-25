@@ -1,7 +1,6 @@
 """Pairing flow: the TV shows a prompt, accept it with the remote."""
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 try:  # newer Home Assistant releases ship probatio in place of voluptuous
@@ -33,6 +32,7 @@ class LgtvPointerFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", data_schema=HOST_SCHEMA)
 
     async def async_step_pairing(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        self._async_abort_entries_match({CONF_HOST: self._host})  # before the TV shows a prompt
         errors: dict[str, str] = {}
         if user_input is not None:
             client = new_client(self.hass, self._host, None)
@@ -55,25 +55,3 @@ class LgtvPointerFlow(ConfigFlow, domain=DOMAIN):
                     data={CONF_HOST: self._host, CONF_CLIENT_KEY: key},
                 )
         return self.async_show_form(step_id="pairing", errors=errors)
-
-    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
-        self._host = entry_data[CONF_HOST]
-        return await self.async_step_reauth_confirm()
-
-    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            client = new_client(self.hass, self._host, None)
-            try:
-                await client.connect()
-            except WebOsTvPairError:
-                errors["base"] = "error_pairing"
-            except CONNECT_ERRORS:
-                errors["base"] = "cannot_connect"
-            else:
-                key = client.client_key
-                await client.disconnect()
-                return self.async_update_reload_and_abort(
-                    self._get_reauth_entry(), data={CONF_HOST: self._host, CONF_CLIENT_KEY: key}
-                )
-        return self.async_show_form(step_id="reauth_confirm", errors=errors)
