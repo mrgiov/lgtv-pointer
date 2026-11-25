@@ -16,6 +16,9 @@ from .const import ICONS_DIR, ICONS_URL, LIST_LAUNCH_POINTS
 
 _LOGGER = logging.getLogger(__name__)
 
+# The TV's web server drops connections when asked for ~30 icons at once (seen on an OLED C3).
+MAX_PARALLEL_DOWNLOADS = 4
+
 
 async def download_app_icons(hass: HomeAssistant, client: WebOsClient) -> dict[str, str]:
     """Download each app icon once and return {app title: local url}."""
@@ -26,11 +29,13 @@ async def download_app_icons(hass: HomeAssistant, client: WebOsClient) -> dict[s
 
     have = set(await hass.async_add_executor_job(os.listdir, directory))
 
+    limit = asyncio.Semaphore(MAX_PARALLEL_DOWNLOADS)
+
     async def fetch(source: str) -> str | None:
         name = f"{hashlib.sha1(source.encode()).hexdigest()[:16]}.png"
         if name not in have:
             try:
-                async with session.get(source, timeout=10) as reply:
+                async with limit, session.get(source, timeout=10) as reply:
                     reply.raise_for_status()
                     data = await reply.read()
             except Exception as err:  # one broken icon must not stop the others

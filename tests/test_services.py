@@ -1,10 +1,12 @@
 import asyncio
+import re
 
 import pytest
 from aiowebostv import WebOsTvPairError
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMockResponse
 
 from custom_components.lgtv_pointer.const import DOMAIN, EVENT_KEYBOARD, IME_REGISTER_KEYBOARD
 
@@ -122,6 +124,27 @@ async def test_app_icons_returns_local_urls(hass, client, setup, tmp_path, aiocl
     result = await call(hass, "app_icons")
     assert list(result["icons"]) == ["Netflix"]
     assert result["icons"]["Netflix"].startswith("/local/lg-tv-remote/icons/")
+
+
+async def test_app_icons_never_asks_the_tv_for_many_icons_at_once(hass, client, setup, tmp_path, aioclient_mock):
+    hass.config.config_dir = str(tmp_path)
+    client.request.return_value = {
+        "launchPoints": [{"title": f"App {i}", "icon": f"https://tv.local/{i}.png"} for i in range(30)]
+    }
+    running = peak = 0
+
+    async def slow_icon(method, url, data):
+        nonlocal running, peak
+        running += 1
+        peak = max(peak, running)
+        await asyncio.sleep(0.01)
+        running -= 1
+        return AiohttpClientMockResponse(method, url, response=b"png")
+
+    aioclient_mock.get(re.compile(r"https://tv\.local/\d+\.png"), side_effect=slow_icon)
+    result = await call(hass, "app_icons")
+    assert len(result["icons"]) == 30
+    assert peak <= 4
 
 
 async def test_unload_disconnects(hass, client, setup):
